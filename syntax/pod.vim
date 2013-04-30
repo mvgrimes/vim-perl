@@ -1,4 +1,13 @@
 " Vim syntax file
+" Language:      Perl POD format with support for arbitrary POD sections
+" Maintainer:    Andy Lester <andy@petdance.com>,
+" Homepage:      https://github.com/rkitover/perl-vim-mxd
+" Bugs/requests: https://github.com/rkitover/perl-vim-mxd/issues
+" Last Change:   2011-01-27
+" Contributors:  Oleg Kostyuk <cub@cpan.org>
+"
+" ORIGINAL VERSION:
+"
 " Language:      Perl POD format
 " Maintainer:    Andy Lester <andy@petdance.com>
 " Previously:    Scott Bigham <dsb@killerbunnies.org>
@@ -38,6 +47,7 @@ syn match podCommand    "^=pod"         contains=@NoSpell
 syn match podCommand    "^=for"         nextgroup=podForKeywd skipwhite contains=@NoSpell
 syn match podCommand    "^=begin"       nextgroup=podForKeywd skipwhite contains=@NoSpell
 syn match podCommand    "^=end"         nextgroup=podForKeywd skipwhite contains=@NoSpell
+syn match podCommand    "^=[a-z]\S*"    nextgroup=podForKeywd skipwhite contains=@NoSpell
 
 " Text of a =head1, =head2 or =item command
 syn match podCmdText	".*$" contained contains=podFormat,@NoSpell

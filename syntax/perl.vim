@@ -1,14 +1,17 @@
 " Vim syntax file
-" Language:      Perl 5
-" Maintainer:    Andy Lester <andy@petdance.com>
-" Homepage:      http://github.com/vim-perl/vim-perl/tree/master
-" Bugs/requests: http://github.com/vim-perl/vim-perl/issues
-" Last Change:   2010-08-10
+" Language:      Perl 5 with MooseX::Declare and Moose keywords
+" Version:       0.16
+" Maintainer:    Mark Grimes <mvgrimes@cpan.org>
+" Homepage:      https://github.com/mvgrimes/vim-perl
+" Bugs/requests: https://github.com/mvgrimes/vim-perl/issues
+" Last Change:   2013-04-30
 " Contributors:  Andy Lester <andy@petdance.com>
+"                Oleg Kostyuk <cub@cpan.org>
 "                Hinrik Örn Sigurðsson <hinrik.sig@gmail.com>
 "                Lukas Mai <l.mai.web.de>
 "                Nick Hibma <nick@van-laarhoven.org>
 "                Sonia Heimann <niania@netsurf.org>
+"                Denis Pokataev
 "                and many others.
 "
 " Please download most recent version first before mailing
@@ -17,7 +20,9 @@
 " The following parameters are available for tuning the
 " perl syntax highlighting, with defaults given:
 "
-" unlet perl_include_pod
+" let perl_include_pod=1
+" let perl_string_as_statement=1
+" let perl_moose_stuff=1
 " unlet perl_no_scope_in_variables
 " unlet perl_no_extended_vars
 " unlet perl_string_as_statement
@@ -30,8 +35,88 @@
 " let perl_nofold_subs = 1
 " unlet perl_fold_anonymous_subs
 
-if exists("b:current_syntax")
+
+
+if version < 600
+  echoerr ">=vim-6.0 is required to run perl.vim"
   finish
+elseif exists("b:current_syntax")
+  finish
+endif
+
+" set some nice defaults people usually don't set, unless overridden
+if !exists("perl_include_pod")
+  let perl_include_pod=1
+endif
+if !exists("perl_string_as_statement")
+  let perl_string_as_statement=1
+endif
+if !exists("perl_moose_stuff")
+  let perl_moose_stuff=1
+endif
+
+
+if perl_moose_stuff
+  " TODO:
+  "   fix $foo->Bar->baz(23)->dongs highlighting
+  "   make the -> for method calls a different color
+  "   make methods a different color than variables
+
+  " Moose, HTML::FormHandler and some other common functions
+  syn match perlStatementProc             "\<\%(carp\|class_has\|croak\|has_field\|immutable\|is\|mutable\|reftype\|requires\)\>"
+
+  " Moose Keywords
+  syn match perlStatementProc             "\<\%(extends\|with\|has\|before\|after\|around\|super\|override\|inner\|augment\|confess\|blessed\)\>"
+
+  " Moose::Util::TypeConstraints Keywords
+  syn match perlStatementProc             "\<\%(type\|subtype\|class_type\|role_type\|maybe_type\|duck_type\|as\|where\|message\|optimize_as\|inline_as\|coerce\|from\|via\|enum\|find_type_constraint\|register_type_constraint\)\>"
+
+  " Test::More, Test::Moose and Test::Exception stuff (except for "is", which is already highlighted.)
+  syn match perlStatementProc             "\<\%(plan\|use_ok\|require_ok\|ok\|isnt\|diag\|note\|explain\|like\|unlike\|cmp_ok\|is_deeply\|skip\|can_ok\|isa_ok\|new_ok\|pass\|fail\|skip\|todo_skip\|done_testing\|BAIL_OUT\|meta_ok\|does_ok\|has_attribute_ok\|throws_ok\|dies_ok\|lives_ok\|lives_and\|subtest\)\>"
+
+  " Test::Deep, except SPECIAL COMPARISONS
+  syn match perlStatementProc             "\<\%(cmp_deeply\|cmp_bag\|cmp_set\|cmp_methods\|eq_deeply\|cmp_details\|deep_diag\)\>"
+
+  " Test::Differences
+  syn match perlStatementProc             "\<\%(eq_or_diff\|eq_or_diff_data\|eq_or_diff_text\|table_diff\|unified_diff\|oldstyle_diff\|context_diff\)\>"
+
+  " Test::*, all functions like all_perl_files_ok/all_pod_coverage_ok/etc
+  " may be, will be better something like: \<\%(all_[a-z_]\+_ok\)\>
+  syn match perlStatementProc             "\<\%(all_perl_files_ok\|all_critic_ok\|all_pod_coverage_ok\|all_pod_files_spelling_ok\|all_pod_files_ok\|all_cover_ok\)\>"
+
+  " Try::Tiny
+  syn match perlStatementProc             "\<\%(try\|catch\|finally\)\>"
+
+  " Switch.pm
+  syn match perlConditional               "\<\%(switch\|case\)\>"
+
+  syn match perlMethodName                +\%(\h\|::\|['"]\)\%(\w\|::\|\$\|[{}]\)\+["']\?\_s*\|+ contained nextgroup=perlPossibleComma
+  syn match perlPossibleComma             +\_s*\%(=>\|,\)\?\_s*\|+ contained nextgroup=perlAnonSubOrMethod
+  syn match perlAnonSubOrMethod           +\_s*\%(sub\|method\)\_s*\|+ contained contains=perlFunction nextgroup=perlMethodSignature
+  syn match perlMethodSignature           +\_s*\%((\_[^)]*)\)\?\_s*\|+ nextgroup=perlSubAttributes,perlComment contained contains=@perlExpr,perlStatementProc
+  syn match perlFunction                  +\<\%(class\|role\|extends\|with\)\>\_s*+ nextgroup=perlPackageRef
+  syn match perlFunction                  +\<\%(method\|before\|after\|around\|override\|augment\)\>\_s*+ nextgroup=perlMethodName
+
+  command -nargs=+ HiLink hi def link <args>
+  HiLink perlMethodName Function
+  delcommand HiLink
+
+  "hilite Moose types
+  syn match perlString "\<Any\>\|\<Item\>\|\<Bool\>\|\<Maybe\>\|\<Undef\>\|\<Defined\>\|\<Value\>\|\<Num\>\|\<Int\>\|\<Str\>\|\<ClassName\>\|\<Ref\>\|\<ScalarRef\>\|\<ArrayRef\>\|\<HashRef\>\|\<CodeRef\>\|\<RegexpRef\>\|\<GlobRef\>\|\<FileHandle\>\|\<Object\>\|\<Role\>"
+
+  if !exists("perl_no_sync_on_sub")
+    syn sync match perlSync       grouphere NONE "^\s*\<method\>"
+    syn sync match perlSync       grouphere NONE "^\s*\<class\>"
+    syn sync match perlSync       grouphere NONE "^\s*\<role\>"
+  endif
+
+  if exists("perl_fold")
+    if !exists("perl_nofold_subs")
+      syn region perlSubFold     start="^\z(\s*\)\<class\>.*[^};]$" end="^\z1}\s*\%(#.*\)\=$" transparent fold keepend
+      syn region perlSubFold     start="^\z(\s*\)\<role\>.*[^};]$"  end="^\z1}\s*\%(#.*\)\=$" transparent fold keepend
+      syn region perlSubFold     start="^\z(\s*\)\<method\>.*[^};]$" end="^\z1}\s*\%(#.*\)\=$" transparent fold keepend
+    endif
+  endif
 endif
 
 
@@ -419,7 +504,11 @@ if exists("perl_fold")
   syn sync fromstart
 else
   " fromstart above seems to set minlines even if perl_fold is not set.
-  syn sync minlines=0
+  if line('$') <= 5000
+    syn sync fromstart
+  else
+    syn sync minlines=0
+  endif
 endif
 
 command -nargs=+ HiLink hi def link <args>
@@ -538,9 +627,7 @@ else
   syn sync maxlines=100
 endif
 
-syn sync match perlSyncPOD	grouphere perlPOD "^=pod"
-syn sync match perlSyncPOD	grouphere perlPOD "^=head"
-syn sync match perlSyncPOD	grouphere perlPOD "^=item"
+syn sync match perlSyncPOD	grouphere perlPOD "^=[a-z]\S*"
 syn sync match perlSyncPOD	grouphere NONE "^=cut"
 
 let b:current_syntax = "perl"
